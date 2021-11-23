@@ -3,38 +3,37 @@ version: 0.2
 
 env:
   variables:
-    IMAGE_REPO: vince-riv
-    IMAGE_NAME: docker-py3-flask
+    IMAGE_REPO: vinceriv
+    IMAGE_NAME: py3-flask
+  parameter-store:
+    DOCKER_HUB_USER: /CodeBuild/dockerhub/username
+    DOCKER_HUB_TOKEN: /CodeBuild/dockerhub/token
 
 phases:
   pre_build:
     commands:
       - echo Checking for critical env vars
-      - test -n "$IMAGE_REPO"
-      - test -n "$IMAGE_NAME"
-      - test -n "$CODEBUILD_SOURCE_VERSION"
-      - test -n "$AWS_DEFAULT_REGION"
-      - test -n "$AWS_ACCOUNT_ID"
-      #- echo Logging in to Amazon ECR...
-      #- aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - test -n "$IMAGE_REPO" && echo "$IMAGE_REPO"
+      - test -n "$IMAGE_NAME" && echo "$IMAGE_NAME"
+      - test -n "$DOCKER_HUB_USER"
+      - test -n "$DOCKER_HUB_TOKEN"
+      - test -n "$CODEBUILD_RESOLVED_SOURCE_VERSION" && echo "$CODEBUILD_RESOLVED_SOURCE_VERSION"
+      - test -n "$CODEBUILD_SOURCE_VERSION" && echo "$CODEBUILD_SOURCE_VERSION"
+      - echo Logging in to Docker Hub...
+      - docker login -u $DOCKER_HUB_USER -p $DOCKER_HUB_TOKEN docker.io
   build:
     commands:
       - echo Build started on `date`
-      - export IMAGE_TAG=$CODEBUILD_SOURCE_VERSION
-      - git_describe=`git describe || true`
-      - ecr_repo=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO
-      - container_image_tag=${IMAGE_REPO}:${IMAGE_NAME}-$IMAGE_TAG
-      - echo
-      - echo ENVIRONMENT
-      - env | sort
+      - export IMAGE_TAG=$CODEBUILD_RESOLVED_SOURCE_VERSION
+      - container_image_tag=${IMAGE_REPO}/${IMAGE_NAME}:$IMAGE_TAG
       - echo
       - echo Building the Docker image...
       - docker build -t $container_image_tag .
-      - docker tag $container_image_tag $ecr_repo:$IMAGE_TAG
-      - test -z "$CODEBUILD_WEBHOOK_TRIGGER" || docker tag $container_image_tag $IMAGE_REPO:`echo $CODEBUILD_WEBHOOK_TRIGGER | tr / -`
-      - test -z "$git_describe" || docker tag $container_image_tag $IMAGE_REPO:$git_describe
-  #post_build:
-  #  commands:
-  #    - echo Build completed on `date`
-  #    - echo Pushing the Docker image...
-  #    - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO:$IMAGE_TAG
+      - echo
+      - echo Tagging image
+      - ./scripts/docker-tag.sh $container_image_tag
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+      - docker push --all-tags ${IMAGE_REPO}/${IMAGE_NAME}
