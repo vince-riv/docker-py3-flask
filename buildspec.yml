@@ -9,14 +9,19 @@ phases:
   build:
     commands:
       - echo Build started on `date`
-      - export git_describe=`git describe`
+      - export IMAGE_TAG=$CODEBUILD_SOURCE_VERSION
+      - git_describe=`git describe || true`
+      - ecr_repo=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
+      - container_image_tag=$IMAGE_REPO_NAME:$IMAGE_NAME-$IMAGE_TAG
       - echo
       - echo ENVIRONMENT
       - env | sort
       - echo
       - echo Building the Docker image...
-      - docker build -t $IMAGE_REPO_NAME:$git_describe .
-      #- docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+      - docker build -t $container_image_tag .
+      - docker tag $container_image_tag $ecr_repo:$IMAGE_TAG
+      - test -z "$CODEBUILD_WEBHOOK_TRIGGER" || docker tag $container_image_tag $IMAGE_REPO_NAME:`echo $CODEBUILD_WEBHOOK_TRIGGER | tr / -`
+      - test -z "$git_describe" || docker tag $container_image_tag $IMAGE_REPO_NAME:$git_describe
   #post_build:
   #  commands:
   #    - echo Build completed on `date`
