@@ -3,13 +3,15 @@ version: 0.2
 
 env:
   variables:
-    IMAGE_REPO_NAME: vince-riv
+    IMAGE_REPO: vince-riv
+    IMAGE_NAME: docker-py3-flask
 
 phases:
   pre_build:
     commands:
       - echo Checking for critical env vars
-      - test -n "$IMAGE_REPO_NAME"
+      - test -n "$IMAGE_REPO"
+      - test -n "$IMAGE_NAME"
       - test -n "$CODEBUILD_SOURCE_VERSION"
       - test -n "$AWS_DEFAULT_REGION"
       - test -n "$AWS_ACCOUNT_ID"
@@ -20,8 +22,8 @@ phases:
       - echo Build started on `date`
       - export IMAGE_TAG=$CODEBUILD_SOURCE_VERSION
       - git_describe=`git describe || true`
-      - ecr_repo=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
-      - container_image_tag=${IMAGE_REPO_NAME}:${IMAGE_NAME}-$IMAGE_TAG
+      - ecr_repo=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO
+      - container_image_tag=${IMAGE_REPO}:${IMAGE_NAME}-$IMAGE_TAG
       - echo
       - echo ENVIRONMENT
       - env | sort
@@ -29,10 +31,10 @@ phases:
       - echo Building the Docker image...
       - docker build -t $container_image_tag .
       - docker tag $container_image_tag $ecr_repo:$IMAGE_TAG
-      - test -z "$CODEBUILD_WEBHOOK_TRIGGER" || docker tag $container_image_tag $IMAGE_REPO_NAME:`echo $CODEBUILD_WEBHOOK_TRIGGER | tr / -`
-      - test -z "$git_describe" || docker tag $container_image_tag $IMAGE_REPO_NAME:$git_describe
+      - test -z "$CODEBUILD_WEBHOOK_TRIGGER" || docker tag $container_image_tag $IMAGE_REPO:`echo $CODEBUILD_WEBHOOK_TRIGGER | tr / -`
+      - test -z "$git_describe" || docker tag $container_image_tag $IMAGE_REPO:$git_describe
   #post_build:
   #  commands:
   #    - echo Build completed on `date`
   #    - echo Pushing the Docker image...
-  #    - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+  #    - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO:$IMAGE_TAG
