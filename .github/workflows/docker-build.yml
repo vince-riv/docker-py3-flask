@@ -19,4 +19,4 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Build the Docker image
-        run: docker build -t ${IMAGE_REPO}/${IMAGE_NAME}:${{ github.sha }}
+        run: docker build -t ${IMAGE_REPO}/${IMAGE_NAME}:${{ github.sha }} .
