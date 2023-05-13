@@ -16,7 +16,7 @@ env:
 jobs:
 
   docker-build-and-push:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       -
         name: Checkout
